@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>🥛 СУЗМА / КУРТ • Учёт + Накладные A6 (PDF)</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            font-family: system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+        }
+        body {
+            background: #f5f3f0;
+            padding: 20px 10px;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        .app-wrapper {
+            max-width: 1300px;
+            width: 100%;
+            background: white;
+            border-radius: 32px;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.05);
+            padding: 24px 22px 32px;
+            border: 1px solid #efe6dd;
+        }
+        
+        .product-switcher {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            background: #ede5dd;
+            padding: 8px;
+            border-radius: 60px;
+            width: fit-content;
+        }
+        .product-btn {
+            background: transparent;
+            border: none;
+            padding: 12px 32px;
+            border-radius: 40px;
+            font-size: 1.3rem;
+            font-weight: 600;
+            cursor: pointer;
+            color: #5f4d3c;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .product-btn.active {
+            background: white;
+            color: #2e241e;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+        }
+        .page-switcher {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 24px;
+            border-bottom: 2px solid #e0d3c7;
+            padding-bottom: 12px;
+        }
+        .page-btn {
+            background: transparent;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 30px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            color: #6b5d51;
+        }
+        .page-btn.active {
+            background: #2e241e;
+            color: white;
+        }
+        .page-btn.hidden {
+            display: none;
+        }
+        h1 {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            font-size: 1.8rem;
+            color: #2e241e;
+            margin: 16px 0 12px;
+            flex-wrap: wrap;
+        }
+        .firebase-status {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.85rem;
+        }
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #ccc;
+        }
+        .status-dot.online { background: #2e7d32; }
+        .input-panel {
+            background: #faf7f4;
+            padding: 18px 20px;
+            border-radius: 24px;
+            margin-bottom: 24px;
+            border: 1px solid #e6dbd0;
+        }
+        .form-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            gap: 12px 18px;
+        }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            min-width: 130px;
+        }
+        .input-group label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            font-weight: 600;
+            color: #7a6856;
+            margin-bottom: 4px;
+        }
+        .input-group input, .input-group select {
+            background: white;
+            border: 1.5px solid #ddd0c4;
+            border-radius: 20px;
+            padding: 10px 14px;
+            font-size: 0.95rem;
+        }
+        .action-btn {
+            background: #2e241e;
+            border: none;
+            color: white;
+            font-weight: 600;
+            padding: 10px 24px;
+            border-radius: 40px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .action-btn.green { background: #1b5e20; }
+        .toolbar {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+        .excel-btn, .pdf-btn {
+            background: #2c6e2c;
+            padding: 8px 18px;
+            border-radius: 32px;
+            font-weight: 600;
+            border: none;
+            color: white;
+            cursor: pointer;
+        }
+        .pdf-btn { background: #b33c1f; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 10px 8px; border-bottom: 1px solid #eaded4; text-align: left; }
+        th { background: #ede5dd; }
+        .delete-btn {
+            background: white;
+            border: 1px solid #ddc9bb;
+            border-radius: 30px;
+            width: 32px;
+            height: 32px;
+            cursor: pointer;
+        }
+        .total-panel {
+            background: #e7ddd3;
+            border-radius: 24px;
+            padding: 12px 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: space-between;
+            margin-top: 16px;
+        }
+        .page-content { display: none; }
+        .page-content.active { display: block; }
+        .empty-message { text-align: center; padding: 30px; color: #8f7e6e; }
+        
+        /* Модальное окно накладной A6 */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            visibility: hidden;
+            opacity: 0;
+            transition: 0.2s;
+        }
+        .modal-overlay.active {
+            visibility: visible;
+            opacity: 1;
+        }
+        .invoice-modal {
+            background: white;
+            width: 500px;
+            max-width: 94%;
+            border-radius: 24px;
+            padding: 20px;
+            box-shadow: 0 20px 30px rgba(0,0,0,0.2);
+        }
+        .invoice-content {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            padding: 12px;
+            background: #fffef7;
+            border: 1px dashed #aaa;
+        }
+        .invoice-content h3 { text-align: center; margin: 5px 0; }
+        .invoice-items td { padding: 4px 2px; font-size: 11px; }
+        .invoice-actions { margin-top: 16px; display: flex; gap: 12px; justify-content: flex-end; }
+        button { cursor: pointer; }
+        .sale-items-list {
+            background: #f3efe9;
+            border-radius: 20px;
+            padding: 12px;
+            margin-top: 8px;
+        }
+        .sale-item-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+        }
+        .remove-item-btn {
+            background: #c0392b;
+            color: white;
+            border: none;
+            border-radius: 30px;
+            padding: 4px 12px;
+        }
+        .add-item-btn {
+            background: #5d6b5a;
+            margin-top: 6px;
+        }
+    </style>
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyDmhcqMSPDZN33GOigxyKJhKC8giYul1x8",
+            authDomain: "takasa-park.firebaseapp.com",
+            projectId: "takasa-park",
+            storageBucket: "takasa-park.firebasestorage.app",
+            messagingSenderId: "334971968040",
+            appId: "1:334971968040:web:2f06cd1165084939f9b31d",
+            measurementId: "G-Y5ZDZGE3CB"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        
+        window.db = db;
+        window.collection = collection;
+        window.addDoc = addDoc;
+        window.getDocs = getDocs;
+        window.doc = doc;
+        window.updateDoc = updateDoc;
+        window.deleteDoc = deleteDoc;
+        window.query = query;
+        window.orderBy = orderBy;
+        window.onSnapshot = onSnapshot;
+        console.log('✅ Firebase готов');
+    </script>
+    <!-- SheetJS (XLSX) & jspdf -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+<div class="app-wrapper">
+    <div class="firebase-status"><span id="firebaseStatusText">Загрузка...</span><span class="status-dot" id="firebaseStatusDot"></span></div>
+    <div class="product-switcher">
+        <button class="product-btn active" data-product="suzma">🥛 СУЗМА</button>
+        <button class="product-btn" data-product="kurt">🧀 КУРТ</button>
+    </div>
+    <div class="page-switcher" id="pageSwitcher">
+        <button class="page-btn active" data-page="purchase">📥 ПОКУПКА</button>
+        <button class="page-btn" data-page="sale" id="salePageBtn">💰 ПРОДАЖА (мульти)</button>
+        <button class="page-btn" data-page="history" id="historyPageBtn">📋 ИСТОРИЯ</button>
+    </div>
+    <h1><span id="pageTitle">📥 ПОКУПКА</span><span id="productBadge">СУЗМА</span></h1>
+    
+    <!-- СТРАНИЦА ПОКУПКИ -->
+    <div id="purchasePage" class="page-content active">
+        <div class="input-panel">
+            <div class="form-row">
+                <div class="input-group"><label>📆 Дата</label><input type="date" id="purchaseDateInput"></div>
+                <div class="input-group"><label>💰 Цена за кг (сом)</label><input type="number" id="purchasePriceInput" step="1"></div>
+                <div class="input-group"><label>⚖️ Кг купил</label><input type="number" id="purchaseWeightInput" step="0.1"></div>
+                <button class="action-btn" id="addPurchaseBtn">➕ Добавить покупку</button>
+            </div>
+        </div>
+        <div class="toolbar"><button class="excel-btn" id="exportPurchasesExcel">📎 Выгрузить покупки Excel</button></div>
+        <div class="table-wrapper"><table><thead><tr><th>Дата</th><th>Цена</th><th>Куплено кг</th><th>Остаток кг</th><th>Стоимость остатка</th><th></th></tr></thead><tbody id="purchaseTableBody"></tbody></table><div id="purchaseEmptyMsg" class="empty-message">Нет покупок</div></div>
+        <div class="total-panel"><div>📦 Всего куплено: <strong id="purchaseTotalKg">0 кг</strong></div><div>💰 Стоимость остатка: <strong id="purchaseTotalRemainSum">0 сом</strong></div><div>📊 Остаток: <strong id="purchaseTotalRemain">0 кг</strong></div></div>
+    </div>
+    
+    <!-- СТРАНИЦА ПРОДАЖИ (мульти-выбор) -->
+    <div id="salePage" class="page-content">
+        <div class="input-panel">
+            <div class="form-row"><div class="input-group"><label>📆 Дата продажи</label><input type="date" id="saleDateMulti"></div></div>
+            <div id="multiItemsContainer" class="sale-items-list">
+                <div class="sale-item-row" data-index="0">
+                    <select class="batchSelectItem" style="min-width:200px;"><option value="">-- Выберите партию --</option></select>
+                    <input type="number" placeholder="Цена продажи (кг/сом)" class="salePriceItem" step="1" style="width:130px;">
+                    <input type="number" placeholder="Кг" class="saleWeightItem" step="0.1" style="width:100px;">
+                    <button class="remove-item-btn" style="display:none;">✖</button>
+                </div>
+            </div>
+            <button class="action-btn add-item-btn" id="addSaleRowBtn">➕ Добавить ещё товар</button>
+            <button class="action-btn green" id="commitMultiSaleBtn" style="margin-top:12px;">💸 Оформить продажу (несколько)</button>
+            <div id="multiSaleInfo" style="margin-top:8px; font-size:0.8rem; color:#5e4b3a;"></div>
+        </div>
+        <div class="toolbar">
+            <button class="excel-btn" id="exportSalesExcel">📎 Выгрузить продажи Excel</button>
+            <button class="pdf-btn" id="printInvoiceBtn">🧾 Накладная A6 (последняя продажа)</button>
+            <button class="pdf-btn" id="downloadInvoicePdfBtn">⬇️ Скачать накладную PDF (A6)</button>
+        </div>
+        <div class="table-wrapper"><table><thead><tr><th>Дата</th><th>Товары (партия)</th><th>Кг / Цена продажи</th><th>Выручка</th><th>Прибыль</th></tr></thead><tbody id="saleTableBody"></tbody></table><div id="saleEmptyMsg" class="empty-message">Нет продаж</div></div>
+        <div class="total-panel"><div>📤 Всего продано: <strong id="saleTotalKg">0 кг</strong></div><div>💵 Выручка: <strong id="saleTotalRevenue">0 сом</strong></div><div>📈 Прибыль: <strong id="saleTotalProfit">0 сом</strong></div></div>
+    </div>
+    
+    <!-- ИСТОРИЯ -->
+    <div id="historyPage" class="page-content"><div class="toolbar"><button class="excel-btn" id="exportHistoryExcel">📎 История Excel</button><button class="pdf-btn" id="exportHistoryPdf">📄 История PDF</button></div><div class="table-wrapper"><table><thead><tr><th>Дата</th><th>Тип</th><th>Продукт</th><th>Детали</th><th>Кг</th><th>Сумма</th></tr></thead><tbody id="historyTableBody"></tbody></table><div id="historyEmptyMsg" class="empty-message">Пусто</div></div></div>
+</div>
+
+<!-- Модальное окно предпросмотра накладной A6 -->
+<div id="invoiceModal" class="modal-overlay"><div class="invoice-modal"><div id="invoicePrintable" class="invoice-content"></div><div class="invoice-actions"><button id="closeInvoiceBtn">Закрыть</button><button id="printInvoiceA6Btn">🖨️ Печать</button><button id="downloadModalPdfBtn">📄 Скачать PDF</button></div></div></div>
+
+<script>
+    (function(){
+        let currentProduct = 'suzma';
+        let currentPage = 'purchase';
+        let purchases = [];
+        let sales = [];
+        let firestoreReady = false;
+        
+        const productBtns = document.querySelectorAll('.product-btn');
+        const pageBtns = document.querySelectorAll('.page-btn');
+        const salePageBtn = document.getElementById('salePageBtn');
+        const historyPageBtn = document.getElementById('historyPageBtn');
+        const pages = { purchase: document.getElementById('purchasePage'), sale: document.getElementById('salePage'), history: document.getElementById('historyPage') };
+        const pageTitle = document.getElementById('pageTitle');
+        const productBadge = document.getElementById('productBadge');
+        const statusDot = document.getElementById('firebaseStatusDot');
+        const statusText = document.getElementById('firebaseStatusText');
+        
+        const purchaseDate = document.getElementById('purchaseDateInput');
+        const purchasePrice = document.getElementById('purchasePriceInput');
+        const purchaseWeight = document.getElementById('purchaseWeightInput');
+        const addPurchaseBtn = document.getElementById('addPurchaseBtn');
+        const purchaseTbody = document.getElementById('purchaseTableBody');
+        const purchaseEmpty = document.getElementById('purchaseEmptyMsg');
+        const purchaseTotalKg = document.getElementById('purchaseTotalKg');
+        const purchaseTotalRemainSum = document.getElementById('purchaseTotalRemainSum');
+        const purchaseTotalRemain = document.getElementById('purchaseTotalRemain');
+        
+        const multiContainer = document.getElementById('multiItemsContainer');
+        const addSaleRowBtn = document.getElementById('addSaleRowBtn');
+        const commitMultiSaleBtn = document.getElementById('commitMultiSaleBtn');
+        const saleDateMulti = document.getElementById('saleDateMulti');
+        const multiSaleInfo = document.getElementById('multiSaleInfo');
+        const saleTbody = document.getElementById('saleTableBody');
+        const saleEmpty = document.getElementById('saleEmptyMsg');
+        const saleTotalKgSpan = document.getElementById('saleTotalKg');
+        const saleTotalRevenueSpan = document.getElementById('saleTotalRevenue');
+        const saleTotalProfitSpan = document.getElementById('saleTotalProfit');
+        const historyTbody = document.getElementById('historyTableBody');
+        const historyEmpty = document.getElementById('historyEmptyMsg');
+        
+        const exportPurchasesExcel = document.getElementById('exportPurchasesExcel');
+        const exportSalesExcel = document.getElementById('exportSalesExcel');
+        const exportHistoryExcel = document.getElementById('exportHistoryExcel');
+        const exportHistoryPdf = document.getElementById('exportHistoryPdf');
+        const printInvoiceBtn = document.getElementById('printInvoiceBtn');
+        const downloadInvoicePdfBtn = document.getElementById('downloadInvoicePdfBtn');
+        const invoiceModal = document.getElementById('invoiceModal');
+        const invoicePrintable = document.getElementById('invoicePrintable');
+        const closeInvoiceBtn = document.getElementById('closeInvoiceBtn');
+        const printInvoiceA6Btn = document.getElementById('printInvoiceA6Btn');
+        const downloadModalPdfBtn = document.getElementById('downloadModalPdfBtn');
+        
+        let lastSaleData = null;
+        
+        const today = new Date().toISOString().split('T')[0];
+        purchaseDate.value = today;
+        saleDateMulti.value = today;
+        
+        function checkFirebase() {
+            if(window.db) { firestoreReady=true; statusDot.classList.add('online'); statusText.textContent='Online (takasa-park)'; setupListeners(); }
+            else setTimeout(checkFirebase,300);
+        }
+        setTimeout(checkFirebase,300);
+        
+        function setupListeners(){
+            const purchasesQuery = window.query(window.collection(window.db, 'purchases'), window.orderBy('date','desc'));
+            window.onSnapshot(purchasesQuery, (snap)=>{ purchases=[]; snap.forEach(d=>purchases.push({id:d.id, ...d.data()})); renderPurchases(); if(currentProduct==='kurt') rebuildBatchOptions(); renderSales(); renderHistory(); });
+            const salesQuery = window.query(window.collection(window.db, 'sales'), window.orderBy('date','desc'));
+            window.onSnapshot(salesQuery, (snap)=>{ sales=[]; snap.forEach(d=>sales.push({id:d.id, ...d.data()})); if(currentProduct==='kurt'){ renderSales(); renderHistory(); } });
+        }
+        
+        function rebuildBatchOptions() {
+            const filtered = purchases.filter(p=>p.product==='kurt' && (p.remainKg||p.weightKg)>0.01);
+            const selects = document.querySelectorAll('.batchSelectItem');
+            selects.forEach(select => {
+                const currentVal = select.value;
+                select.innerHTML = '<option value="">-- Выберите партию --</option>';
+                filtered.forEach(p=>{
+                    const remain = (p.remainKg!==undefined?p.remainKg:p.weightKg);
+                    const opt = document.createElement('option');
+                    opt.value = p.id;
+                    opt.textContent = `${p.date} | ${p.price} сом/кг | ост:${remain.toFixed(1)}кг`;
+                    opt.dataset.price = p.price;
+                    opt.dataset.remain = remain;
+                    opt.dataset.date = p.date;
+                    select.appendChild(opt);
+                });
+                if(currentVal && document.querySelector(`.batchSelectItem option[value="${currentVal}"]`)) select.value = currentVal;
+                else select.value = '';
+                updateRowInfo(select.closest('.sale-item-row'));
+            });
+        }
+        
+        function updateRowInfo(row){
+            const select = row.querySelector('.batchSelectItem');
+            const priceInput = row.querySelector('.salePriceItem');
+            if(select && select.selectedIndex>0){
+                const opt = select.options[select.selectedIndex];
+                const priceKg = parseFloat(opt.dataset.price);
+                if(!priceInput.value) priceInput.value = Math.round(priceKg*1.2);
+                multiSaleInfo.innerHTML = `📌 Доступно: ${parseFloat(opt.dataset.remain).toFixed(1)} кг. Можно выбрать несколько позиций.`;
+            } else { multiSaleInfo.innerHTML = 'Выберите партии для продажи.'; }
+        }
+        
+        function addSaleRow(){
+            const newRow = document.createElement('div');
+            newRow.className = 'sale-item-row';
+            newRow.innerHTML = `
+                <select class="batchSelectItem" style="min-width:200px;"><option value="">-- Выберите партию --</option></select>
+                <input type="number" placeholder="Цена продажи" class="salePriceItem" step="1" style="width:130px;">
+                <input type="number" placeholder="Кг" class="saleWeightItem" step="0.1" style="width:100px;">
+                <button class="remove-item-btn">✖</button>
+            `;
+            multiContainer.appendChild(newRow);
+            const filtered = purchases.filter(p=>p.product==='kurt' && (p.remainKg||p.weightKg)>0.01);
+            const newSelect = newRow.querySelector('.batchSelectItem');
+            filtered.forEach(p=>{
+                const remain = (p.remainKg!==undefined?p.remainKg:p.weightKg);
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                opt.textContent = `${p.date} | ${p.price} сом/кг | ост:${remain.toFixed(1)}кг`;
+                opt.dataset.price = p.price;
+                opt.dataset.remain = remain;
+                opt.dataset.date = p.date;
+                newSelect.appendChild(opt);
+            });
+            newSelect.addEventListener('change',()=>updateRowInfo(newRow));
+            newRow.querySelector('.remove-item-btn').addEventListener('click',()=>{ if(document.querySelectorAll('.sale-item-row').length>1) newRow.remove(); else alert('Должна быть хотя бы одна позиция'); });
+            updateRowInfo(newRow);
+        }
+        addSaleRowBtn.addEventListener('click', addSaleRow);
+        
+        async function commitMultiSale(){
+            if(currentProduct !== 'kurt') { alert('Продажа только для КУРТ'); return; }
+            const rows = document.querySelectorAll('.sale-item-row');
+            const saleItems = [];
+            let hasError = false;
+            for(let row of rows){
+                const select = row.querySelector('.batchSelectItem');
+                const price = parseFloat(row.querySelector('.salePriceItem')?.value);
+                const weight = parseFloat(row.querySelector('.saleWeightItem')?.value);
+                if(!select.value || !price || !weight || price<=0 || weight<=0) { hasError=true; break; }
+                const opt = select.options[select.selectedIndex];
+                const remain = parseFloat(opt.dataset.remain);
+                if(weight > remain+0.001) { hasError=true; multiSaleInfo.innerHTML=`Ошибка: ${opt.textContent} остаток ${remain} кг, а вы продаёте ${weight}`; break; }
+                saleItems.push({ purchaseId: select.value, purchaseDate: opt.dataset.date, purchasePrice: parseFloat(opt.dataset.price), salePrice: price, weightKg: weight });
+            }
+            if(hasError || saleItems.length===0) return;
+            const saleDateVal = saleDateMulti.value;
+            if(!saleDateVal) return;
+            const totalRevenue = saleItems.reduce((s,i)=>s + i.salePrice*i.weightKg,0);
+            const totalProfit = saleItems.reduce((s,i)=>s + (i.salePrice - i.purchasePrice)*i.weightKg,0);
+            const saleRecord = {
+                product: 'kurt',
+                date: saleDateVal,
+                items: saleItems.map(i=>({ purchaseId:i.purchaseId, purchaseDate:i.purchaseDate, purchasePrice:i.purchasePrice, salePrice:i.salePrice, weightKg:i.weightKg })),
+                totalRevenue, totalProfit,
+                createdAt: new Date().toISOString()
+            };
+            try {
+                await window.addDoc(window.collection(window.db, 'sales'), saleRecord);
+                for(let item of saleItems){
+                    const purchaseDoc = purchases.find(p=>p.id === item.purchaseId);
+                    if(purchaseDoc){
+                        const oldRemain = (purchaseDoc.remainKg !== undefined) ? purchaseDoc.remainKg : purchaseDoc.weightKg;
+                        const newRemain = Math.round((oldRemain - item.weightKg)*10)/10;
+                        await window.updateDoc(window.doc(window.db, 'purchases', item.purchaseId), { remainKg: newRemain });
+                    }
+                }
+                lastSaleData = { date: saleDateVal, items: saleItems, totalRevenue, totalProfit };
+                const firstRow = rows[0];
+                const others = Array.from(rows).slice(1);
+                others.forEach(r=>r.remove());
+                firstRow.querySelector('.salePriceItem').value = '';
+                firstRow.querySelector('.saleWeightItem').value = '';
+                if(firstRow.querySelector('.batchSelectItem')) firstRow.querySelector('.batchSelectItem').value = '';
+                multiSaleInfo.innerHTML = '✅ Продажа оформлена! Накладная готова.';
+                renderSales(); renderHistory(); renderPurchases();
+            } catch(e){ console.error(e); alert('Ошибка'); }
+        }
+        commitMultiSaleBtn.addEventListener('click', commitMultiSale);
+        
+        addPurchaseBtn.addEventListener('click', async()=>{
+            if(!firestoreReady) return;
+            const date = purchaseDate.value;
+            const price = parseFloat(purchasePrice.value);
+            const weight = parseFloat(purchaseWeight.value);
+            if(!date || price<=0 || weight<=0) return;
+            const purchase = { product: currentProduct, date, price, weightKg: weight, remainKg: weight, createdAt: new Date().toISOString() };
+            await window.addDoc(window.collection(window.db, 'purchases'), purchase);
+            purchasePrice.value = ''; purchaseWeight.value = '';
+        });
+        
+        function renderPurchases(){
+            const filtered = purchases.filter(p=>p.product === currentProduct);
+            purchaseEmpty.style.display = filtered.length ? 'none' : 'block';
+            let totalKg=0, totalRemainKg=0, totalRemainSum=0, html='';
+            filtered.forEach(p=>{
+                const remain = (p.remainKg!==undefined?p.remainKg:p.weightKg);
+                totalKg += p.weightKg;
+                totalRemainKg += remain;
+                totalRemainSum += remain * p.price;
+                html += `<tr><td>${formatDate(p.date)}</td><td>${p.price} сом</td><td>${p.weightKg.toFixed(1)} кг</td><td>${remain.toFixed(1)} кг</td><td>${Math.round(remain*p.price)} сом</td><td><button class="delete-btn" data-id="${p.id}" data-type="purchase">✕</button></td></tr>`;
+            });
+            purchaseTbody.innerHTML = html;
+            purchaseTotalKg.innerText = totalKg.toFixed(1)+' кг';
+            purchaseTotalRemain.innerText = totalRemainKg.toFixed(1)+' кг';
+            purchaseTotalRemainSum.innerText = Math.round(totalRemainSum).toLocaleString()+' сом';
+            document.querySelectorAll('[data-type="purchase"]').forEach(btn=>btn.addEventListener('click',async(e)=>{
+                if(confirm('Удалить покупку и связанные продажи?')){
+                    const id = btn.dataset.id;
+                    const relatedSales = sales.filter(s=> s.items ? s.items.some(i=>i.purchaseId===id) : s.purchaseId===id);
+                    for(let sale of relatedSales) if(sale.id) await window.deleteDoc(window.doc(window.db,'sales',sale.id));
+                    await window.deleteDoc(window.doc(window.db,'purchases',id));
+                }
+            }));
+        }
+        
+        function renderSales(){
+            const filtered = sales.filter(s=>s.product==='kurt');
+            saleEmpty.style.display = filtered.length ? 'none' : 'block';
+            let totalKg=0, totalRevenue=0, totalProfit=0, html='';
+            filtered.forEach(s=>{
+                let kgSum=0, revSum=0, profitSum=0, detailsHtml='';
+                if(s.items && s.items.length){
+                    s.items.forEach(it=>{
+                        kgSum += it.weightKg;
+                        revSum += it.salePrice * it.weightKg;
+                        profitSum += (it.salePrice - it.purchasePrice)*it.weightKg;
+                        detailsHtml += `${formatDate(it.purchaseDate)} (${it.weightKg.toFixed(1)}кг по ${it.salePrice} сом)<br>`;
+                    });
+                    totalKg+=kgSum; totalRevenue+=revSum; totalProfit+=profitSum;
+                    html += `<tr><td>${formatDate(s.date)}</td><td>${detailsHtml}</td><td>${kgSum.toFixed(1)} кг</td><td>${Math.round(revSum)} сом</td><td style="color:${profitSum>=0?'green':'red'}">${profitSum>=0?'+':''}${Math.round(profitSum)} сом</td></tr>`;
+                }
+            });
+            saleTbody.innerHTML = html;
+            saleTotalKgSpan.innerText = totalKg.toFixed(1)+' кг';
+            saleTotalRevenueSpan.innerText = Math.round(totalRevenue).toLocaleString()+' сом';
+            saleTotalProfitSpan.innerText = (totalProfit>=0?'+':'')+Math.round(totalProfit).toLocaleString()+' сом';
+        }
+        
+        function renderHistory(){
+            let items=[];
+            purchases.filter(p=>p.product==='kurt').forEach(p=>{ items.push({date:p.date, type:'📥 ПОКУПКА', product:'Курт', details:`${p.price} сом/кг`, kg:p.weightKg, sum:p.price*p.weightKg, ts:p.date}); });
+            sales.filter(s=>s.product==='kurt').forEach(s=>{
+                if(s.items){
+                    s.items.forEach(it=>{
+                        items.push({date:s.date, type:'💰 ПРОДАЖА', product:'Курт', details:`партия ${it.purchaseDate}, ${it.salePrice} сом/кг`, kg:it.weightKg, sum:it.salePrice*it.weightKg, ts:s.date});
+                    });
+                }
+            });
+            items.sort((a,b)=>(b.ts||'').localeCompare(a.ts||''));
+            historyEmpty.style.display = items.length?'none':'block';
+            let html='';
+            items.forEach(i=>{ html+=`<tr><td>${formatDate(i.date)}</td><td>${i.type}</td><td>${i.product}</td><td>${i.details}</td><td>${i.kg.toFixed(1)} кг</td><td>${Math.round(i.sum)} сом</td></tr>`; });
+            historyTbody.innerHTML = html;
+        }
+        
+        // Функция генерации HTML накладной (БЕЗ ПРИБЫЛИ)
+        function generateInvoiceHtml(saleData){
+            if(!saleData || !saleData.items) return '';
+            let itemsHtml = '<table class="invoice-items" style="width:100%; border-collapse:collapse;"> <thead><tr><th style="text-align:left;">Товар</th><th>Кг</th><th>Цена/кг</th><th>Сумма</th></tr></thead><tbody>';
+            saleData.items.forEach(it=>{
+                itemsHtml += `<tr><td>Курт (партия ${it.purchaseDate})</td><td style="text-align:center">${it.weightKg.toFixed(1)}</td><td style="text-align:center">${it.salePrice} сом</td><td style="text-align:right">${(it.salePrice*it.weightKg).toFixed(0)} сом</td></tr>`;
+            });
+            itemsHtml += `</tbody></table><hr/><div style="margin-top:8px;"><strong>ИТОГО: ${saleData.totalRevenue.toFixed(0)} сом</strong></div><div style="margin-top:12px; font-size:10px; text-align:center;">Спасибо за покупку!</div>`;
+            return `<div style="width:105mm; margin:0 auto; font-family:'Courier New', monospace; padding:6px;"><h3 style="text-align:center;">ТОВАРНАЯ НАКЛАДНАЯ (A6)</h3><div>Дата: ${formatDate(saleData.date)}</div>${itemsHtml}</div>`;
+        }
+        
+        function showInvoiceModal(saleData){
+            const fullHtml = generateInvoiceHtml(saleData);
+            invoicePrintable.innerHTML = fullHtml;
+            invoiceModal.classList.add('active');
+        }
+        
+        function downloadInvoiceAsPdf(saleData){
+            if(!saleData) { alert('Нет данных для накладной'); return; }
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ unit: 'mm', format: 'a6' }); // A6: 105x148 mm
+            const htmlContent = generateInvoiceHtml(saleData);
+            const wrapper = document.createElement('div');
+            wrapper.innerHTML = htmlContent;
+            wrapper.style.fontFamily = "'Courier New', monospace";
+            wrapper.style.fontSize = '11px';
+            wrapper.style.padding = '8px';
+            document.body.appendChild(wrapper);
+            doc.html(wrapper, {
+                callback: function(doc) {
+                    doc.save(`накладная_${saleData.date}.pdf`);
+                    document.body.removeChild(wrapper);
+                },
+                x: 5, y: 5,
+                width: 95,
+                windowWidth: 400
+            });
+        }
+        
+        printInvoiceBtn.addEventListener('click',()=>{ if(lastSaleData) showInvoiceModal(lastSaleData); else alert('Нет оформленной продажи. Сделайте новую продажу.'); });
+        downloadInvoicePdfBtn.addEventListener('click',()=>{ if(lastSaleData) downloadInvoiceAsPdf(lastSaleData); else alert('Нет продажи для скачивания'); });
+        closeInvoiceBtn.addEventListener('click',()=>invoiceModal.classList.remove('active'));
+        printInvoiceA6Btn.addEventListener('click',()=>{
+            const content = invoicePrintable.cloneNode(true);
+            const win = window.open('', '_blank');
+            win.document.write(`<html><head><title>Накладная A6</title><style>body{font-family:monospace; width:105mm; margin:0 auto; padding:8px;} table{width:100%} td,th{padding:4px}</style></head><body>${content.innerHTML}</body></html>`);
+            win.document.close(); win.print();
+        });
+        downloadModalPdfBtn.addEventListener('click',()=>{ if(lastSaleData) downloadInvoiceAsPdf(lastSaleData); else alert('Нет данных'); });
+        
+        // Экспорты Excel
+        exportPurchasesExcel.addEventListener('click',()=>{
+            const data = purchases.filter(p=>p.product===currentProduct).map(p=>({Дата:p.date, Цена_кг:p.price, Кг_куплено:p.weightKg, Остаток_кг:p.remainKg||p.weightKg, Стоимость_остатка:(p.remainKg||p.weightKg)*p.price}));
+            const ws = XLSX.utils.json_to_sheet(data); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Покупки'); XLSX.writeFile(wb,`${currentProduct}_покупки.xlsx`);
+        });
+        exportSalesExcel.addEventListener('click',()=>{
+            let rows=[];
+            sales.filter(s=>s.product==='kurt').forEach(s=>{ if(s.items) s.items.forEach(it=>{ rows.push({Дата_продажи:s.date, Партия:it.purchaseDate, Цена_покупки:it.purchasePrice, Цена_продажи:it.salePrice, Кг:it.weightKg, Выручка:it.salePrice*it.weightKg, Прибыль:(it.salePrice-it.purchasePrice)*it.weightKg}); }); });
+            const ws=XLSX.utils.json_to_sheet(rows); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Продажи'); XLSX.writeFile(wb,'kurt_продажи.xlsx');
+        });
+        exportHistoryExcel.addEventListener('click',()=>{
+            let rows=[]; purchases.filter(p=>p.product==='kurt').forEach(p=>rows.push({Дата:p.date, Тип:'Покупка', Детали:`${p.price} сом/кг`, Кг:p.weightKg, Сумма:p.price*p.weightKg}));
+            sales.filter(s=>s.product==='kurt').forEach(s=>{ if(s.items)s.items.forEach(it=>rows.push({Дата:s.date, Тип:'Продажа', Детали:`${it.salePrice} сом/кг`, Кг:it.weightKg, Сумма:it.salePrice*it.weightKg})); });
+            const ws=XLSX.utils.json_to_sheet(rows); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'История'); XLSX.writeFile(wb,'kurt_история.xlsx');
+        });
+        exportHistoryPdf.addEventListener('click',async()=>{
+            const {jsPDF}=window.jspdf; const doc=new jsPDF(); doc.text('История операций (Курт)',10,10); let y=20;
+            const rows=[]; purchases.filter(p=>p.product==='kurt').forEach(p=>rows.push([p.date,'Покупка',`${p.price} сом/кг`,p.weightKg+'кг',(p.price*p.weightKg)+'сом']));
+            sales.filter(s=>s.product==='kurt').forEach(s=>{ if(s.items)s.items.forEach(it=>rows.push([s.date,'Продажа',`${it.salePrice} сом/кг`,it.weightKg+'кг',(it.salePrice*it.weightKg)+'сом'])); });
+            rows.forEach(r=>{ if(y>280){doc.addPage(); y=20;} doc.text(r.join(' | '),10,y); y+=8; });
+            doc.save('история_kurt.pdf');
+        });
+        
+        // Переключение продукта
+        productBtns.forEach(btn=>btn.addEventListener('click',()=>{
+            productBtns.forEach(b=>b.classList.remove('active')); btn.classList.add('active');
+            currentProduct = btn.dataset.product;
+            productBadge.textContent = currentProduct==='suzma'?'СУЗМА':'КУРТ';
+            const isKurt = currentProduct === 'kurt';
+            salePageBtn.classList.toggle('hidden', !isKurt);
+            historyPageBtn.classList.toggle('hidden', !isKurt);
+            if(!isKurt && (currentPage==='sale'||currentPage==='history')){ currentPage='purchase'; document.querySelector('.page-btn[data-page="purchase"]').click(); }
+            renderPurchases();
+            if(isKurt) { rebuildBatchOptions(); renderSales(); renderHistory(); }
+            else { document.getElementById('saleTableBody').innerHTML=''; document.getElementById('historyTableBody').innerHTML=''; }
+        }));
+        pageBtns.forEach(btn=>btn.addEventListener('click',()=>{
+            if(btn.classList.contains('hidden')) return;
+            const page = btn.dataset.page;
+            pageBtns.forEach(b=>b.classList.remove('active')); btn.classList.add('active');
+            currentPage = page;
+            Object.values(pages).forEach(p=>p.classList.remove('active'));
+            pages[currentPage].classList.add('active');
+            const titles={purchase:'📥 ПОКУПКА', sale:'💰 ПРОДАЖА (мульти)', history:'📋 ИСТОРИЯ'};
+            pageTitle.textContent = titles[currentPage];
+        }));
+        function formatDate(d){ if(!d) return ''; let parts=d.split('-'); return parts.length===3?`${parts[2]}.${parts[1]}.${parts[0]}`:d; }
+        
+        addSaleRow(); // одна строка по умолчанию
+        renderPurchases();
+    })();
+</script>
+</body>
+</html>
